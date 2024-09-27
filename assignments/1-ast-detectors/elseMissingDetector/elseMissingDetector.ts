@@ -27,7 +27,6 @@ import { AstCondition } from "@tact-lang/compiler/dist/grammar/ast";
  * else {  ...  }
  * ```
  */
-
 export class MissingElseDetector extends ASTDetector {
   warnings: MistiTactWarning[] = [];
 
