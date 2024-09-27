@@ -10,15 +10,13 @@ contract ConditionalTest {
         // Missing else clause here - Bad
     }
 
-   
-
     // Example with no else if clauses - should not trigger the detector
     fun checkValue2(d: Int) {
         if (d % 2 == 0) {
             // Even number
         }
         else {
-            // Odd number
+            // Do something else
         }
         // Only if and else - OK
     }
@@ -35,15 +33,23 @@ contract ConditionalTest {
                 // Nested else if
             }
             else {
-                // Nested else
+               // Do something else
             }
         }
         else if (f > 50) {
             // Do something else
         }
         else {
-            // Outer else clause
+            // Do something else
         }
         // Proper use of else clauses - OK
     }
+
+    fun checkValue4(a: Int) {
+        if (a > 10) {
+            // Do something
+        }
+        // Only if - OK 
+    }
+
 }

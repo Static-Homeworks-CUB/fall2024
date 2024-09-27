@@ -6,7 +6,8 @@ describe("MissingElseDetector tests", () => {
     const contractPath = path.resolve(__dirname, "test", "contract.tact");
 
     // Create a driver instance that runs only the MissingElseDetector
-    const detectorPath = "path/to/your/MissingElseDetector.ts";
+    const detectorPath =
+      "assignments/1-ast-detectors/elseMissingDetector/elseMissingDetector.ts";
     const className = "MissingElseDetector";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
@@ -18,15 +19,16 @@ describe("MissingElseDetector tests", () => {
 
     // Execute the driver
     const result = await driver.execute();
+    console.log("Warnings found:");
 
     // Check that the detector found the expected number of warnings
     expect(result.warningsFound).toBe(1);
 
-    // Verify that the output includes the expected warning message
+    //Verify that the output includes the expected warning message
     expect(
       result.output!.includes(
-        "Conditional statement with 'else if' clauses should end with an 'else' clause"
-      )
+        "Conditional statement with 'else if' clauses should end with an 'else' clause",
+      ),
     ).toBe(true);
   });
 });
