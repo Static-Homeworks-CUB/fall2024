@@ -22,7 +22,7 @@ namespace AstHelpers {
   /**
    * Represents a loop statement in the AST.
    */
-  type AstStatementLoop =
+  export type AstStatementLoop =
     | AstStatementWhile
     | AstStatementUntil
     | AstStatementRepeat
@@ -51,7 +51,7 @@ namespace AstHelpers {
    */
   export function forEachExpressionInLoop(
     node: AstNode,
-    callback: (expr: AstExpression) => void,
+    callback: (expr: AstExpression, loop: AstStatementLoop) => void,
   ) {
     // Keep track of loop IDs to avoid processing the same loop multiple times.
     const seenLoopIds = new Set<number>();
@@ -66,7 +66,7 @@ namespace AstHelpers {
           }
         });
         // Apply the callback to each expression within the loop.
-        forEachExpression(stmt, callback);
+        forEachExpression(stmt, (expr) => callback(expr, stmt));
       }
     });
   }
@@ -94,19 +94,24 @@ export class SendInLoop extends ASTDetector {
 
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     for (const entry of cu.ast.getProgramEntries()) {
-      AstHelpers.forEachExpressionInLoop(entry, (expr) => {
-        this.checkExpression(expr);
+      AstHelpers.forEachExpressionInLoop(entry, (expr, loop) => {
+        this.checkExpression(expr, loop);
       });
     }
 
     return this.warnings;
   }
 
-  private checkExpression(expr: AstExpression) {
+  private checkExpression(
+    expr: AstExpression,
+    loop: AstHelpers.AstStatementLoop,
+  ) {
     if (expr.kind === "static_call" && expr.function.text === "send") {
+      // To report the least enclosing loop, it is better to write custom traversal logic.
       this.warnings.push(
         this.makeWarning(
-          `Sending in a loop can cause the contract to run out of funds.`,
+          "Sending in a loop can cause the contract to run out of funds.\n" +
+            `Enclosing loop: ${loop.loc.interval.getLineAndColumnMessage()}`,
           Severity.INFO,
           expr.loc,
         ),
