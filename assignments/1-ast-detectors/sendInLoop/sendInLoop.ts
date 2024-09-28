@@ -84,7 +84,7 @@ namespace AstHelpers {
  * repeat (10) {
  *     send(SendParameters{
  *         to: sender(),
- *         value: 0,
+ *         value: 100,
  *     });
  * }
  * ```
