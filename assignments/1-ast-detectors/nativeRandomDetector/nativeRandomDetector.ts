@@ -4,11 +4,7 @@ import {
   MistiTactWarning,
   Severity,
 } from "@nowarp/misti/dist/src/internals/warnings";
-import { 
-    forEachStatement,
-    forEachExpression
- } from "@nowarp/misti/dist/src/internals/tactASTUtil";
-import { AstId } from "@tact-lang/compiler/dist/grammar/ast";
+import { forEachExpression } from "@nowarp/misti/dist/src/internals/tactASTUtil";
 import { AstExpression } from "@tact-lang/compiler/dist/grammar/ast";
 
 /**
@@ -32,36 +28,32 @@ import { AstExpression } from "@tact-lang/compiler/dist/grammar/ast";
  * ```
  */
 
-
-
 export class NativeRandomDetector extends ASTDetector {
   warnings: MistiTactWarning[] = [];
 
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     Array.from(cu.ast.getProgramEntries()).forEach((node) => {
-        forEachExpression(node, (expr) => {
-            this.checkExpression(expr)
-        });
-    }
-    );
+      forEachExpression(node, (expr) => {
+        this.checkExpression(expr);
+      });
+    });
     return this.warnings;
   }
-
 
   /**
    * Checks if AST expression is a `nativeRandom` function call.
    */
   private checkExpression(expr: AstExpression): void {
     if (expr.kind === "static_call") {
-        if (expr.function.text === "nativeRandom") {
-            this.warnings.push(
-                this.makeWarning(
-                    `Function nativeRandom requires prior random generator initialization. Consider using randomInt instead`,
-                    Severity.INFO,
-                    expr.loc 
-                )
-            );
-        }
+      if (expr.function.text === "nativeRandom") {
+        this.warnings.push(
+          this.makeWarning(
+            `Function nativeRandom requires prior random generator initialization. Consider using randomInt instead`,
+            Severity.INFO,
+            expr.loc,
+          ),
+        );
+      }
     }
   }
 }

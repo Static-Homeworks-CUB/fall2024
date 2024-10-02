@@ -26,7 +26,9 @@ describe("NativeRandom detector tests", () => {
 
     // Examine the errors output.
     expect(
-      result.output!.includes("Function nativeRandom requires prior random generator initialization. Consider using randomInt instead"),
+      result.output!.includes(
+        "Function nativeRandom requires prior random generator initialization. Consider using randomInt instead",
+      ),
     ).toBe(true);
   });
 });
