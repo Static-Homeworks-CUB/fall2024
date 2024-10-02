@@ -7,7 +7,7 @@ describe("ExternalReceiverDetector tests", () => {
 
     // Create a driver instance that runs only the given custom detector
     const detectorPath =
-      "assignments/1-ast-detectors/ExternalReceiverDetector.ts";
+      "assignments/1-ast-detectors/externalReceiver/ExternalReceiverDetector.ts";
     const className = "ExternalReceiverDetector";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
@@ -24,7 +24,7 @@ describe("ExternalReceiverDetector tests", () => {
     const result = await driver.execute();
 
     // Examine the errors output.
-    expect(result.warningsFound).toBe(1);
+    expect(result.warningsFound).toBe(3);
     expect(result.output!.includes("Using an external receiver")).toBe(true);
   });
 });
