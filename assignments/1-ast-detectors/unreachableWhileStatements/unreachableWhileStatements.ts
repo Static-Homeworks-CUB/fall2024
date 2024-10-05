@@ -33,6 +33,9 @@ import {
 export class UnreachableWhileStatements extends ASTDetector {
   warnings: MistiTactWarning[] = [];
 
+  /**
+   * Recursively checks unreachable code in while statements
+   */
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     cu.ast.getProgramEntries().forEach((entry) => {
       forEachStatement(entry, (stmt) => {
@@ -53,6 +56,9 @@ export class UnreachableWhileStatements extends ASTDetector {
     return this.warnings;
   }
 
+  /**
+   * For while statement define if it contains unreachable code
+   */
   private unreachableWhileUsage(stmt: AstStatementWhile): boolean {
     return !(stmt.condition as AstBoolean).value && stmt.statements.length != 0;
   }
