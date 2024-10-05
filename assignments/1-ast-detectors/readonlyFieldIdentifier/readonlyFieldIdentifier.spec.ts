@@ -20,7 +20,7 @@ describe("ReadonlyFieldIdentifier detector tests", () => {
     // Execute the driver
     // You could also get the complete output by running Misti this way:
     //   export DIR=assignments/1-ast-detectors/singleLetterIdentifier
-    //   yarn misti --detectors $DIR/singleLetterIdentifier.ts:SingleLetterIdentifier $DIR:/test/contract.tact
+    //   yarn misti --detectors $DIR/unreachableWhileStatements.ts:UnreachableWhileStatements $DIR:/test/contract.tact
     const result = await driver.execute();
     expect(result.warningsFound).toBe(1);
 
