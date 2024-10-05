@@ -1,13 +1,13 @@
 import { Driver } from "@nowarp/misti/src/cli";
 import path from "path";
 
-describe("UnreachableWhileStatements detector tests", () => {
+describe("SingleLetterIdentifier detector tests", () => {
   it("should detect an issue in the sample contract", async () => {
     const contractPath = path.resolve(__dirname, "test", "contract.tact");
 
     // Create a driver instance that runs only the given custom detector
     const detectorPath =
-      "assignments/1-ast-detectors/singleLetterIdentifier/unreachableWhileStatements.ts";
+      "assignments/1-ast-detectors/singleLetterIdentifier/singleLetterIdentifier.ts";
     const className = "SingleLetterIdentifier";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
@@ -20,7 +20,7 @@ describe("UnreachableWhileStatements detector tests", () => {
     // Execute the driver
     // You could also get the complete output by running Misti this way:
     //   export DIR=assignments/1-ast-detectors/singleLetterIdentifier
-    //   yarn misti --detectors $DIR/unreachableWhileStatements.ts:UnreachableWhileStatements $DIR/test/contract.tact
+    //   yarn misti --detectors $DIR/singleLetterIdentifier.ts:SingleLetterIdentifier $DIR:/test/contract.tact
     const result = await driver.execute();
     expect(result.warningsFound).toBe(4);
 

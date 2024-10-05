@@ -73,7 +73,7 @@ popd
    </details>
 
 2. **Assigning the issue:** Assign yourself to the chosen issue in the GitHub interface: ![](../../img/assign-github.png)
-3. **Examining the source code:** Examine the source code in this directory. You could take a look at [the `UnreachableWhileStatements` detector](./singleLetterIdentifier) here as an example.
+3. **Examining the source code:** Examine the source code in this directory. You could take a look at [the `SingleLetterIdentifier` detector](./singleLetterIdentifier) here as an example.
 4. **Writing the detector:** Create your own detector following the same code structure as the existing ones.
 5. **Writing tests:** Write unit tests to show that your implementation works correctly. Use `*.spec.ts` files in this directory as an example.
 6. **Running linters and tests:** Ensure the ESLint linter and the Prettier formatter don't report on your code and your detector passing tests: `yarn test-all`. Typically, you can automatically fix some errors using `yarn fix-all`.
