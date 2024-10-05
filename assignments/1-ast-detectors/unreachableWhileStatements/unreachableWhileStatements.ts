@@ -7,31 +7,26 @@ import {
 import { forEachStatement } from "@nowarp/misti/dist/src/internals/tactASTUtil";
 import {
   AstBoolean,
-  AstCondition,
-  AstId,
   AstStatementWhile,
 } from "@tact-lang/compiler/dist/grammar/ast";
 
 /**
- * This detector highlights the use of single-letter identifiers, including constants,
- * contract fields, function names and arguments, and local variables.
+ * This detector highlights the unreachable while statements.
  *
  * ## Why is it bad?
- * Single-letter names are usually less readable and make code harder to understand.
+ * Unreachable while statements are similar to dead code.
+ * These statements exist, but never are executed
  *
  * ## Example
  * ```tact
- * fun calculateFee(a: Int): Int {
- *   let f: Int = (a * 2) / 100;
- *   return f;
- * }
+ * while (false) {} // OK: No statements in the body
+ * while (false) { self.do_something(); } // Bad
  * ```
  *
  * Use instead:
  * ```tact
- * fun calculateFee(amount: Int): Int {
- *   let fee: Int = (amount * 2) / 100;
- *   return fee;
+ * while (false) {} // OK: No statements in the body
+ * while (a > 5) { self.do_something(); } // OK: The condition is fixed
  * }
  * ```
  */
@@ -41,26 +36,24 @@ export class UnreachableWhileStatements extends ASTDetector {
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     cu.ast.getProgramEntries().forEach((entry) => {
       forEachStatement(entry, (stmt) => {
-        if (stmt.kind === "statement_while") {
-          if (this.whileCheck(stmt)) {
-            this.warnings.push(
-              this.makeWarning(
-                "While statement is not reachable",
-                Severity.INFO,
-                stmt.loc,
-              ),
-            );
-          }
+        if (
+          stmt.kind === "statement_while" &&
+          this.unreachableWhileUsage(stmt)
+        ) {
+          this.warnings.push(
+            this.makeWarning(
+              "While statement is not reachable",
+              Severity.INFO,
+              stmt.loc,
+            ),
+          );
         }
       });
     });
     return this.warnings;
   }
 
-  private whileCheck(stmt: AstStatementWhile): boolean {
-    return (
-      (stmt.condition as AstBoolean).value == false &&
-      stmt.statements.length != 0
-    );
+  private unreachableWhileUsage(stmt: AstStatementWhile): boolean {
+    return !(stmt.condition as AstBoolean).value && stmt.statements.length != 0;
   }
 }

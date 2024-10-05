@@ -22,7 +22,7 @@ contract Test {
 
     fun example2(): Int {
        while (false) {
-         while (false) {
+         while (6) {
             return 7;
          }
        } // Bad
