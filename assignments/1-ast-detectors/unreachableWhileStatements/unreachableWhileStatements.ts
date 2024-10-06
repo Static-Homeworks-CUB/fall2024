@@ -60,6 +60,8 @@ export class UnreachableWhileStatements extends ASTDetector {
    * For while statement define if it contains unreachable code
    */
   private unreachableWhileUsage(stmt: AstStatementWhile): boolean {
+    if (stmt.condition.kind !== "boolean") return false;
+
     return !(stmt.condition as AstBoolean).value && stmt.statements.length != 0;
   }
 }
