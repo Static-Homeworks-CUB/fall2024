@@ -45,17 +45,6 @@ export class MagicNumbersDetector extends ASTDetector {
   private checkNumericLiterals(cu: CompilationUnit): void {
     cu.ast.getProgramEntries().forEach((entry) => {
       forEachStatement(entry, (stmt) => {
-        // console.log(`Found statement: ${stmt.kind}`);
-        // if (stmt.kind === "statement_expression") {
-        //   console.log(` Expression kind: ${stmt.expression.kind}`);
-        //   if (stmt.expression.kind === "op_binary") {
-        //     const expr = stmt.expression as AstOpBinary;
-        //     console.log(
-        //       ` Bin op: ${expr.left.kind} ${expr.op} ${expr.right.kind}`,
-        //     );
-        //   }
-        // }
-
         this.checkForMagicNumberInStatement(stmt);
       });
     });
@@ -76,7 +65,6 @@ export class MagicNumbersDetector extends ASTDetector {
         this.checkForMagicNumber(arg);
       });
     } else if (expr.kind === "op_binary") {
-      // console.log(`Found expression: ${expr.left} ${expr.op} ${expr.right}`);
       [expr.left, expr.right].forEach((arg) => {
         if (
           arg.kind === "number" &&
