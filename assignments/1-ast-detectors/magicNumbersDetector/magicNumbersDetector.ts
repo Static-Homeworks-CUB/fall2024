@@ -4,11 +4,8 @@ import {
   MistiTactWarning,
   Severity,
 } from "@nowarp/misti/dist/src/internals/warnings";
-import { forEachStatement } from "@nowarp/misti/dist/src/internals/tactASTUtil";
-import {
-  AstExpression,
-  AstStatement,
-} from "@tact-lang/compiler/dist/grammar/ast";
+import { forEachExpression } from "@nowarp/misti/dist/src/internals/tactASTUtil";
+import { AstExpression } from "@tact-lang/compiler/dist/grammar/ast";
 
 /**
  * This detector checks for magic numbers in the source code.
@@ -30,7 +27,7 @@ import {
  * ```
  */
 export class MagicNumbersDetector extends ASTDetector {
-  static readonly ALLOWED_MAGIC_NUMBERS = [BigInt(1), BigInt(-1)];
+  static readonly ALLOWED_MAGIC_NUMBERS = [BigInt(0), BigInt(1), BigInt(-1)];
 
   warnings: MistiTactWarning[] = [];
 
@@ -44,8 +41,8 @@ export class MagicNumbersDetector extends ASTDetector {
    */
   private checkNumericLiterals(cu: CompilationUnit): void {
     cu.ast.getProgramEntries().forEach((entry) => {
-      forEachStatement(entry, (stmt) => {
-        this.checkForMagicNumberInStatement(stmt);
+      forEachExpression(entry, (expr) => {
+        this.checkForMagicNumber(expr);
       });
     });
   }
@@ -54,17 +51,7 @@ export class MagicNumbersDetector extends ASTDetector {
    * Checks for numeric literals in the statement.
    */
   private checkForMagicNumber(expr: AstExpression): void {
-    if (expr.kind === "op_unary") {
-      this.checkForMagicNumber(expr.operand);
-    } else if (expr.kind === "method_call") {
-      expr.args.forEach((arg) => {
-        this.checkForMagicNumber(arg);
-      });
-    } else if (expr.kind === "static_call") {
-      expr.args.forEach((arg) => {
-        this.checkForMagicNumber(arg);
-      });
-    } else if (expr.kind === "op_binary") {
+    if (expr.kind === "op_binary") {
       [expr.left, expr.right].forEach((arg) => {
         if (
           arg.kind === "number" &&
@@ -77,40 +64,8 @@ export class MagicNumbersDetector extends ASTDetector {
               expr.loc,
             ),
           );
-        } else if (arg.kind === "op_binary") {
-          this.checkForMagicNumber(arg);
         }
       });
-    }
-  }
-
-  private checkForMagicNumberInStatement(stmt: AstStatement): void {
-    switch (stmt.kind) {
-      case "statement_let":
-        this.checkForMagicNumber(stmt.expression);
-      case "statement_expression":
-        this.checkForMagicNumber(stmt.expression);
-      case "statement_assign":
-        this.checkForMagicNumber(stmt.expression);
-      case "statement_augmentedassign":
-        this.checkForMagicNumber(stmt.expression);
-      case "statement_return":
-        if (stmt.expression) this.checkForMagicNumber(stmt.expression);
-      // TODO
-      case "statement_condition": {
-      }
-      case "statement_while": {
-      }
-      case "statement_until": {
-      }
-      case "statement_repeat": {
-      }
-      case "statement_try": {
-      }
-      case "statement_try_catch": {
-      }
-      case "statement_foreach": {
-      }
     }
   }
 }

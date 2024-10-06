@@ -19,7 +19,7 @@ describe("MagicNumbersDetector tests", () => {
 
     // Execute the driver
     const result = await driver.execute();
-    console.log("Warnings found:");
+    // console.log(`Warnings found:\n${result.output!}`);
 
     // Check that the detector found the expected number of warnings
     expect(result.warningsFound).toBe(4);
