@@ -26,16 +26,24 @@ describe("UnusedLoopVariable detector tests", () => {
 
     // Examine the errors output.
     expect(
-      result.output!.includes("Loop variables 'simple' are not accessed in the loop body."),
+      result.output!.includes(
+        "Loop variables 'simple' are not accessed in the loop body.",
+      ),
     ).toBe(true);
     expect(
-      result.output!.includes("Loop variables 'simpleUntil' are not accessed in the loop body."),
+      result.output!.includes(
+        "Loop variables 'simpleUntil' are not accessed in the loop body.",
+      ),
     ).toBe(true);
     expect(
-      result.output!.includes("Loop variables 'nested' are not accessed in the loop body."),
+      result.output!.includes(
+        "Loop variables 'nested' are not accessed in the loop body.",
+      ),
     ).toBe(true);
     expect(
-        result.output!.includes("Loop variables 'v1 v2' are not accessed in the loop body."),
+      result.output!.includes(
+        "Loop variables 'v1 v2' are not accessed in the loop body.",
+      ),
     ).toBe(true);
     expect(
       result.output!.includes(
@@ -43,19 +51,19 @@ describe("UnusedLoopVariable detector tests", () => {
       ),
     ).toBe(false);
     expect(
-        result.output!.includes(
-            "Loop variables 'variableReassigned' are not accessed in the loop body.",
-        ),
+      result.output!.includes(
+        "Loop variables 'variableReassigned' are not accessed in the loop body.",
+      ),
     ).toBe(false);
     expect(
-        result.output!.includes(
-            "Loop variables 'variableAugmentedOp' are not accessed in the loop body.",
-        ),
+      result.output!.includes(
+        "Loop variables 'variableAugmentedOp' are not accessed in the loop body.",
+      ),
     ).toBe(false);
     expect(
-        result.output!.includes(
-            "Loop variables 'variableUsedInNestedWhile' are not accessed in the loop body.",
-        ),
+      result.output!.includes(
+        "Loop variables 'variableUsedInNestedWhile' are not accessed in the loop body.",
+      ),
     ).toBe(false);
   });
 });
