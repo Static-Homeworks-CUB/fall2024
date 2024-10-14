@@ -48,7 +48,7 @@ export class UnusedLoopVariable extends ASTDetector {
   private checkLoopStatements(cu: CompilationUnit) {
     Array.from(cu.ast.getStatements()).forEach((statement) => {
       if (
-        statement.kind === "statement_while" ||
+        statement.kind == "statement_while" ||
         statement.kind == "statement_until"
       ) {
         this.checkLoopStatementWithVariableInCondition(statement);
@@ -73,10 +73,10 @@ export class UnusedLoopVariable extends ASTDetector {
 
     if (usedVariables.length == 0) return;
 
-    const isAnyVariableUsed = usedVariables.reduce((acc, varId) => {
-      return acc || this.isVariableUsedInLoop(varId, statement);
-    }, false);
-    if (!isAnyVariableUsed) {
+    const isAnyVariableUsed = usedVariables.find((varId) =>
+      this.isVariableUsedInLoop(varId, statement),
+    );
+    if (!isAnyVariableUsed && isAnyVariableUsed == undefined) {
       this.warnings.push(
         this.makeWarning(
           `Loop variables '${usedVariables.reduce((text, variable) => text + variable.text + " ", "").trimEnd()}' are not accessed in the loop body.`,
@@ -93,31 +93,23 @@ export class UnusedLoopVariable extends ASTDetector {
   ): boolean {
     const variableUsagesInStatements = foldStatements(
       statement,
-      0,
+      false,
       (acc, subStatement) => {
-        return acc + this.isVariableUsedInStatement(variable, subStatement);
+        return acc || this.isVariableUsedInStatement(variable, subStatement);
       },
     );
 
-    const variableUsagesInExpressions = foldExpressions(
-      statement,
-      0,
-      (acc, subExpression) => {
-        return acc + this.isVariableUsedInExpression(variable, subExpression);
-      },
-    );
-
-    const variableUsagesInCondition = foldExpressions(
-      statement.condition,
-      0,
-      (acc, subExpression) => {
-        return acc + this.isVariableUsedInExpression(variable, subExpression);
-      },
+    const statementWhereVariableIsUsed = statement.statements.find(
+      (subStatement) =>
+        foldExpressions(subStatement, false, (acc, subExpression) => {
+          return (
+            acc || this.isVariableUsedInExpression(variable, subExpression)
+          );
+        }),
     );
 
     return (
-      variableUsagesInExpressions + variableUsagesInStatements >
-      variableUsagesInCondition
+      variableUsagesInStatements || statementWhereVariableIsUsed != undefined
     );
   }
 
@@ -127,17 +119,17 @@ export class UnusedLoopVariable extends ASTDetector {
   private isVariableUsedInStatement(
     variableId: AstId,
     statement: AstStatement,
-  ): number {
+  ): boolean {
     switch (statement.kind) {
       case "statement_assign": {
-        return statement.path == variableId ? 1 : 0;
+        return statement.path == variableId;
       }
       case "statement_augmentedassign": {
-        return statement.path == variableId ? 1 : 0;
+        return statement.path == variableId;
       }
       default:
     }
-    return 0;
+    return false;
   }
 
   /**
@@ -146,16 +138,16 @@ export class UnusedLoopVariable extends ASTDetector {
   private isVariableUsedInExpression(
     variableId: AstId,
     expression: AstExpression,
-  ): number {
+  ): boolean {
     switch (expression.kind) {
       case "field_access": {
-        return expression.field.text == variableId.text ? 1 : 0;
+        return expression.field.text == variableId.text;
       }
       case "id": {
-        return expression.text == variableId.text ? 1 : 0;
+        return expression.text == variableId.text;
       }
       default:
     }
-    return 0;
+    return false;
   }
 }
