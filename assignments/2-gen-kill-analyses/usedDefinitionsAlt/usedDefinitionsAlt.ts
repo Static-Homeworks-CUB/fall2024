@@ -1,3 +1,6 @@
+import * as path from "path";
+import * as fs from "fs";
+
 import { DataflowDetector } from "@nowarp/misti/dist/src/detectors/detector";
 import {
   BasicBlock,
@@ -52,10 +55,10 @@ function printInfo(info: Info, ast: TactASTStore): string {
       .join(", ");
 
   return [
-    `gen  = [${printDefs(info.gen)}]`,
-    `kill = [${printDefs(info.kill)}]`,
-    `in   = [${printDefs(info.in)}]`,
-    `out  = [${printDefs(info.out)}]`,
+    `// gen  = [${printDefs(info.gen)}]`,
+    `// kill = [${printDefs(info.kill)}]`,
+    `// in   = [${printDefs(info.in)}]`,
+    `// out  = [${printDefs(info.out)}]`,
   ].join("\n");
 }
 
@@ -111,11 +114,20 @@ export class UsedDefinitionsAlt extends DataflowDetector {
 
         output += `${repr} (L:${line.padStart(3, "0")})\n`;
         output += printInfo(info, cu.ast) + "\n";
-        output += `result = [${used}]\n`;
+        output += `// result = [${used}]\n`;
       }
     });
 
-    console.log(output);
+    // Save the output to a file
+    const outputDir = path.join(__dirname);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputPath = path.join(outputDir, "result.txt");
+    fs.writeFileSync(outputPath, output);
+    console.log(
+      `Used definitions analysis results saved to: ${path.relative(process.cwd(), outputPath)}`,
+    );
 
     return Promise.resolve([]);
   }

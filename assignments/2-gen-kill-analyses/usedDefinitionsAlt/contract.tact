@@ -5,10 +5,12 @@ fun test(): Int {
         let b: Int = a + 1;
         if (b > 0) {
             a = a + 5;
-            a = a + 10;
+            b = 10;
         } else {
             a = 6;
+            b = b + 3
         }
+        let c: Int = a + b;
     }
     return a;
 }
