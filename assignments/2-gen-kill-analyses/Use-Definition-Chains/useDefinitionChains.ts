@@ -16,7 +16,7 @@ import {
 } from "@tact-lang/compiler/dist/grammar/ast";
 import { prettyPrint } from "@tact-lang/compiler/dist/prettyPrinter";
 
-type DefinitionSet = Set<number>; 
+type DefinitionSet = Set<number>;
 
 interface ReachingDefinitionsInfo {
   gen: DefinitionSet;
@@ -25,9 +25,7 @@ interface ReachingDefinitionsInfo {
   out: DefinitionSet;
 }
 
-
 export class useDefinitionChains extends DataflowDetector {
-
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     let output = "";
 
@@ -79,7 +77,6 @@ export class useDefinitionChains extends DataflowDetector {
   private variableDefinitions = new Map<string, Set<number>>();
 
   private uses = new Map<BasicBlockIdx, Set<string>>();
-
 
   private performReachingDefinitionsAnalysis(
     cfg: CFG,
@@ -172,7 +169,7 @@ export class useDefinitionChains extends DataflowDetector {
     const definitions = new Set<number>();
 
     if (definedVars.size > 0) {
-      definitions.add(stmt.id); 
+      definitions.add(stmt.id);
     }
 
     return definitions;
