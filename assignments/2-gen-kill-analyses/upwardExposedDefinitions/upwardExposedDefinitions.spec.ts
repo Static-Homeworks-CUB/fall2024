@@ -1,6 +1,5 @@
 import { Driver } from "@nowarp/misti/src/cli";
 import path from "path";
-import fs from "fs/promises";
 
 describe("UpwardExposedDefinitions tests", () => {
   it("should produce correct output for the sample contract", async () => {
