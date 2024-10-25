@@ -20,6 +20,7 @@ type VarNameWithDefinitions = [VarName, ListOfDefinitions];
 
 type MapOfVarsToDefinitions = Map<VarName, ListOfDefinitions>;
 
+
 // export DIR=assignments/2-gen-kill-analyses/reachingDefinitions
 // yarn misti --detectors $DIR/reachingDefinitions.ts:ReachingDefinitions $DIR/contract.tact
 
@@ -255,17 +256,50 @@ export class ReachingDefinitions extends DataflowDetector {
       const lastIteration = reachesSteps.at(reachesSteps.length - 1)!;
       const preLastIteration = reachesSteps.at(reachesSteps.length - 2)!;
 
-      console.log("---")
-      console.log(JSON.stringify(Object.fromEntries(lastIteration)));
-      console.log("***")
-      console.log(JSON.stringify(Object.fromEntries(preLastIteration)));
 
-      if (JSON.stringify(Object.fromEntries(lastIteration)) === JSON.stringify(preLastIteration)) {
+      let areEqual = true;
+
+      if (lastIteration.size !== preLastIteration.size) {
+        areEqual = false;
+        continue;
+      }
+
+      for (const [num1, mapOfValues1] of lastIteration) {
+        const mapOfValues2 = preLastIteration.get(num1)
+
+        if (!mapOfValues2) {
+          areEqual = false;
+          break;
+        }
+
+        if (mapOfValues1.size !== mapOfValues2.size) {
+          areEqual = false;
+          break;
+        }
+
+        for (const [key, arr1] of mapOfValues1) {
+          const arr2 = mapOfValues2.get(key)
+
+          if (!arr2 || arr1.length !== arr2.length) {
+            areEqual = false;
+            break;
+          }
+
+          for (const el1 of arr1) {
+            if (!arr2.includes(el1)) {
+              areEqual = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (areEqual) {
         console.log(lastIteration)
         break
       }
     }
 
-    return ["dw", "ewf"];
+    return ["Done"];
   }
 }
