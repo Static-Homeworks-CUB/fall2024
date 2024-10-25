@@ -2,14 +2,14 @@ import { Driver } from "@nowarp/misti/src/cli";
 import path from "path";
 import fs from "fs/promises";
 
-describe("LiveVariables tests", () => {
+describe("ConstantPropagation tests", () => {
   it("should produce correct output for the sample contract", async () => {
     const contractPath = path.resolve(__dirname, "contract.tact");
 
     // Create a driver instance that runs only the given custom detector
     const detectorPath =
-      "assignments/2-gen-kill-analyses/liveVariables/liveVariables.ts";
-    const className = "LiveVariables";
+      "assignments/2-gen-kill-analyses/constantPropagation/constantPropagation.ts";
+    const className = "ConstantPropagation";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
     });
@@ -23,35 +23,43 @@ describe("LiveVariables tests", () => {
 
     const resultsPath = path.resolve(__dirname, "result.txt");
     const resultsContent = await fs.readFile(resultsPath, "utf-8");
-    const expectedOutput = `// gen  = []
-// kill = [a]
-// in   = []
-// out  = [a]
+    const expectedOutput = `// in = {}
+// out  = {a}
 let a: Int = 0;
 
-// gen  = [a]
-// kill = []
-// in   = [a]
-// out  = [a]
+// in = {a}
+// out  = {a, x}
+let x: Int = a + 5;
+
+// in = {a, x}
+// out  = {a, x}
+if (true)
+
+// in = {a, x}
+// out  = {a}
+x = abs(x);
+
+// in = {a, x}
+// out  = {a, x}
+x = x + 3;
+
+// in = {}
+// out  = {}
 while (a < 10)
 
-// gen  = [a]
-// kill = [b]
-// in   = [a]
-// out  = [b]
+// in = {}
+// out  = {}
 let b: Int = a + 1;
 
-// gen  = [b]
-// kill = [a]
-// in   = [b]
-// out  = [a]
+// in = {}
+// out  = {}
 a = b;
 
-// gen  = [a]
-// kill = []
-// in   = [a]
-// out  = []
-return a; `;
+// in = {}
+// out  = {}
+return a;
+
+`;
     expect(resultsContent.trim()).toBe(expectedOutput.trim());
   });
 });

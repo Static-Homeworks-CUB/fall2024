@@ -3,7 +3,6 @@ import * as path from "path";
 import { DataflowDetector } from "@nowarp/misti/dist/src/detectors/detector";
 import { CompilationUnit } from "@nowarp/misti/dist/src/internals/ir";
 import { MistiTactWarning } from "@nowarp/misti/dist/src/internals/warnings";
-import { foldExpressions } from "@nowarp/misti/dist/src/internals/tactASTUtil";
 import {
   CFG,
   BasicBlockIdx,
@@ -18,14 +17,10 @@ import { prettyPrint } from "@tact-lang/compiler/dist/prettyPrinter";
 
 type VariableSet = Set<string>;
 
-interface LiveVariableInfo {
-  /** Used in the block before any redefinition. */
-  gen: VariableSet;
-  /** Defined in the block. */
-  kill: VariableSet;
-  /** Live at the entry of the block. */
+interface ConstantPropagationInfo {
+  /** Constants known at the entry of the block. */
   in: VariableSet;
-  /** Live at the exit of the block. */
+  /** Constants known at the exit of the block. */
   out: VariableSet;
 }
 
@@ -33,35 +28,31 @@ const setsAreEqual = (setA: Set<string>, setB: Set<string>): boolean =>
   setA.size === setB.size && [...setA].every((elem) => setB.has(elem));
 
 /**
- * An example detector that implements live variables analysis.
+ * A detector that implements constant propagation analysis.
  *
- * Live variables analysis is a backward analysis that tracks which variables are
- * live (used) at various points in the program. It is used to detect unused
- * variables, dead code, etc. or provide compiler optimizations.
- *
- * Use the following command to run it:
- *  export DIR=assignments/2-gen-kill-analyses/liveVariables
- *  yarn misti --detectors $DIR/liveVariables.ts:LiveVariables $DIR/live-variables.tact
+ * Constant propagation is a forward data flow analysis that tracks constant values
+ * for variables at various points in the program.
  */
-export class LiveVariables extends DataflowDetector {
+export class ConstantPropagation extends DataflowDetector {
   /**
-   * Doesn't generate any warnings. Only performs live variables analysis and prints the result.
+   * Doesn't generate any warnings. Only performs constant propagation and prints the result.
    */
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     let output = "";
     cu.forEachCFG(cu.ast, (cfg) => {
       if (cfg.origin === "user") {
-        const result = this.performLiveVariableAnalysis(cfg, cu.ast);
+        const result = this.performConstantPropagationAnalysis(cfg, cu.ast);
         Array.from(result.keys()).forEach((bbIdx) => {
           const bb = cfg.getBasicBlock(bbIdx)!;
-          const stmt = cu.ast.getStatement(bb.stmtID)!;
-          const lva = result.get(bbIdx)!;
+          const cpa = result.get(bbIdx)!;
+
+          const entry = Array.from(cpa.in.keys()).join(", ");
+          const exit = Array.from(cpa.out.keys()).join(", ");
+
           output += [
-            `// gen  = [${Array.from(lva.gen)}]`,
-            `// kill = [${Array.from(lva.kill)}]`,
-            `// in   = [${Array.from(lva.in)}]`,
-            `// out  = [${Array.from(lva.out)}]`,
-            `${prettyPrint(stmt).split("\n")[0].split("{")[0].trim()}`,
+            `// in = {${entry}}`,
+            `// out  = {${exit}}`,
+            `${this.statementString(bb.stmtID, cu.ast)}`,
             "\n",
           ].join("\n");
         });
@@ -76,27 +67,24 @@ export class LiveVariables extends DataflowDetector {
     const outputPath = path.join(outputDir, "result.txt");
     fs.writeFileSync(outputPath, output);
     console.log(
-      `Live variables analysis results saved to: ${path.relative(process.cwd(), outputPath)}`,
+      `Constant propagation results saved to: ${path.relative(process.cwd(), outputPath)}`,
     );
     return [];
   }
 
   /**
-   * Performs live variables analysis for the given CFG.
-   * @returns A map of basic block indices to their live variable information.
+   * Performs constant propagation analysis for the given CFG.
+   * @returns A map of basic block indices to their constant propagation information.
    */
-  private performLiveVariableAnalysis(
+  private performConstantPropagationAnalysis(
     cfg: CFG,
     astStore: TactASTStore,
-  ): Map<BasicBlockIdx, LiveVariableInfo> {
-    const liveVariableInfoMap = new Map<BasicBlockIdx, LiveVariableInfo>();
+  ): Map<BasicBlockIdx, ConstantPropagationInfo> {
+    const constants = new Map<BasicBlockIdx, ConstantPropagationInfo>();
 
-    // Step 1: Get gen and kill sets for each basic block
+    // Step 1: Initialize constant maps for each basic block
     cfg.nodes.forEach((bb) => {
-      const stmt = astStore.getStatement(bb.stmtID)!;
-      liveVariableInfoMap.set(bb.idx, {
-        gen: this.collectUsedVariables(stmt),
-        kill: this.collectDefinedVariables(stmt),
+      constants.set(bb.idx, {
         in: new Set<string>(),
         out: new Set<string>(),
       });
@@ -107,27 +95,21 @@ export class LiveVariables extends DataflowDetector {
     while (!stable) {
       stable = true;
 
-      // Backward analsysis => process in reverse order
-      const nodesInReverse = cfg.nodes.slice().reverse();
-      nodesInReverse.forEach((bb) => {
-        const info = liveVariableInfoMap.get(bb.idx)!;
+      cfg.nodes.forEach((bb) => {
+        const info = constants.get(bb.idx)!;
 
-        // out[B] = Union of in[S] for all successors S of B
-        const outB = new Set<string>();
-        const successors = cfg.getSuccessors(bb.idx);
-        if (successors) {
-          successors.forEach((succ) => {
-            const succInfo = liveVariableInfoMap.get(succ.idx)!;
-            succInfo.in.forEach((v) => outB.add(v));
-          });
+        // in[B] = out[P] if P is the only predecessor of B; else emptySet.
+        // It is possible to track more if we aso track the value of the constants.
+        // Then in[B] = intersection of out[P] for all predecessors P of B
+        const inB = new Set<string>();
+        const predecessors = cfg.getPredecessors(bb.idx);
+        if (predecessors && predecessors.length == 1) {
+          const predInfo = constants.get(predecessors[0].idx)!;
+          this.setUnion(inB, predInfo.out);
         }
-
-        // in[B] = gen[B] ∪ (out[B] - kill[B])
-        const inB = new Set<string>(info.gen);
-        const outMinusKill = new Set<string>( // out[B] - kill[B]
-          [...outB].filter((v) => !info.kill.has(v)),
-        );
-        outMinusKill.forEach((v) => inB.add(v));
+        // Process the block's statement and propagate constants
+        const stmt = astStore.getStatement(bb.stmtID)!;
+        const outB = this.evaluateStatement(inB, stmt);
 
         // Update in[B] and out[B] if they have been changed
         // Fixed point: We terminate the loop when no changes are detected
@@ -142,55 +124,67 @@ export class LiveVariables extends DataflowDetector {
       });
     }
 
-    return liveVariableInfoMap;
+    return constants;
   }
 
   /**
-   * Collects the variables used in the given statement.
-   * @param stmt The statement to collect used variables from.
-   * @returns A set of variable names used in the statement.
+   * Evaluates a statement and returns the updated constant map after executing the statement.
    */
-  private collectUsedVariables(stmt: AstStatement): VariableSet {
-    const used = new Set<string>();
-    const collectExpr = (expr: AstExpression) => {
-      foldExpressions(expr, used, (acc, expr) => {
-        if (expr.kind === "id") acc.add(idText(expr));
-        return acc;
-      });
-    };
-
+  private evaluateStatement(
+    constants: VariableSet,
+    stmt: AstStatement,
+  ): VariableSet {
+    const newConstants = new Set(constants);
+    const defined = this.collectDefinedVariables(stmt);
     switch (stmt.kind) {
       case "statement_let":
-        if (stmt.expression) collectExpr(stmt.expression);
-        break;
       case "statement_assign":
       case "statement_augmentedassign":
-        collectExpr(stmt.expression);
-        break;
-      case "statement_return":
-        if (stmt.expression) collectExpr(stmt.expression);
-        break;
-      case "statement_expression":
-        collectExpr(stmt.expression);
-        break;
-      case "statement_condition":
-        collectExpr(stmt.condition);
-        break;
-      case "statement_while":
-      case "statement_until":
-        collectExpr(stmt.condition);
-        break;
-      case "statement_repeat":
-        collectExpr(stmt.iterations);
-        break;
-      case "statement_foreach":
-        collectExpr(stmt.map);
+        if (this.isConstantExpression(stmt.expression, constants)) {
+          this.setUnion(newConstants, defined);
+        } else {
+          this.setDifference(newConstants, defined);
+        }
         break;
       default:
         break;
     }
+    return newConstants;
+  }
 
-    return used;
+  private isConstantExpression(
+    expr: AstExpression,
+    constants: VariableSet,
+  ): boolean {
+    switch (expr.kind) {
+      case "string":
+      case "number":
+      case "boolean":
+      case "null":
+        return true;
+      case "op_binary":
+        return (
+          this.isConstantExpression(expr.left, constants) &&
+          this.isConstantExpression(expr.right, constants)
+        );
+      case "op_unary":
+        return this.isConstantExpression(expr.operand, constants);
+      case "field_access":
+        return constants.has(idText(expr.field));
+      case "id":
+        return constants.has(idText(expr));
+      case "method_call":
+      case "static_call":
+      case "struct_instance":
+      case "init_of":
+        return false;
+      case "conditional":
+        return (
+          this.isConstantExpression(expr.condition, constants) &&
+          this.isConstantExpression(expr.thenBranch, constants) &&
+          this.isConstantExpression(expr.elseBranch, constants)
+        );
+    }
   }
 
   /**
@@ -212,7 +206,16 @@ export class LiveVariables extends DataflowDetector {
         defined.add(idText(stmt.keyName));
         defined.add(idText(stmt.valueName));
         break;
-      default:
+      case "statement_return":
+      case "statement_expression":
+      case "statement_condition":
+      case "statement_while":
+      case "statement_until":
+      case "statement_repeat":
+      case "statement_try":
+        break;
+      case "statement_try_catch":
+        defined.add(idText(stmt.catchName));
         break;
     }
     return defined;
@@ -225,12 +228,43 @@ export class LiveVariables extends DataflowDetector {
     expr: AstExpression,
     defined: VariableSet,
   ) {
-    if (expr.kind === "id") {
-      defined.add(idText(expr));
-    } else if (expr.kind === "field_access") {
-      // Optionally handle field assignments if needed
-      // For now, we might ignore them or handle them differently
+    switch (expr.kind) {
+      case "field_access":
+        defined.add(idText(expr.field));
+        break;
+      case "id":
+        defined.add(idText(expr));
+        break;
+      case "op_unary":
+      case "string":
+      case "number":
+      case "boolean":
+      case "op_binary":
+      case "method_call":
+      case "static_call":
+      case "struct_instance":
+      case "null":
+      case "init_of":
+      case "conditional":
     }
-    // Handle other expression kinds as needed
+  }
+
+  private setUnion(lhs: Set<string>, rhs: Set<string>) {
+    for (const elm of rhs) {
+      lhs.add(elm);
+    }
+  }
+
+  private setDifference(lhs: Set<string>, rhs: Set<string>) {
+    for (const elm of rhs) {
+      lhs.delete(elm);
+    }
+  }
+
+  private statementString(stmtID: number, astStore: TactASTStore): string {
+    return prettyPrint(astStore.getStatement(stmtID)!)
+      .split("\n")[0]
+      .split("{")[0]
+      .trim();
   }
 }
