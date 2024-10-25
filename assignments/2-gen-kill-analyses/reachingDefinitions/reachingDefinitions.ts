@@ -22,16 +22,18 @@ type VarNameWithDefinitions = [VarName, ListOfDefinitions];
 
 type MapOfVarsToDefinitions = Map<VarName, ListOfDefinitions>;
 
-
+// Необходимо для JSON.stringify()
 declare global {
   interface BigInt {
     toJSON(): number;
   }
 }
 
-BigInt.prototype.toJSON = function () { return Number(this) }
+BigInt.prototype.toJSON = function () {
+  return Number(this);
+};
 
-
+// Запуск:
 // export DIR=assignments/2-gen-kill-analyses/reachingDefinitions
 // yarn misti --detectors $DIR/reachingDefinitions.ts:ReachingDefinitions $DIR/contract.tact
 
@@ -153,23 +155,19 @@ export class ReachingDefinitions extends DataflowDetector {
     // Map AST Statement Id к имени переменной, которая была переопределена (= убита)
     const astIdToKILLSet = new Map<number, VarName | null>();
 
-
     cfg.nodes.forEach((block) => {
       const astStatement = ast.getStatement(block.stmtID);
 
-      if (!astStatement) throw Error(`Internal Error. AST Statement with id ${block.stmtID} is not available.`);
+      if (!astStatement)
+        throw Error(
+          `Internal Error. AST Statement with id ${block.stmtID} is not available.`,
+        );
 
       const genResult = this.getGENSetByAstStatement(astStatement);
       const killResult = this.getKILLSetByAstStatement(astStatement);
 
-      astIdToGENSet.set(
-        block.stmtID,
-        genResult
-      );
-      astIdToKILLSet.set(
-        block.stmtID,
-        killResult
-      );
+      astIdToGENSet.set(block.stmtID, genResult);
+      astIdToKILLSet.set(block.stmtID, killResult);
     });
 
     // Все определения для инициализации итеративного алгоритма
@@ -180,23 +178,24 @@ export class ReachingDefinitions extends DataflowDetector {
     ).reduce((acc, defs) => {
       if (!defs) return acc;
 
-      const [varName, varDefs] = defs
+      const [varName, varDefs] = defs;
 
       const alreadyFoundVarsToDefs = new Map(acc);
 
-      const alreadyFoundDefinitionsToVar = alreadyFoundVarsToDefs.get(varName)
+      const alreadyFoundDefinitionsToVar = alreadyFoundVarsToDefs.get(varName);
       if (!alreadyFoundDefinitionsToVar) {
         // Нет такой переменной ещё
         alreadyFoundVarsToDefs.set(varName, varDefs);
       } else {
         // Уже есть, конкатенируем уже существующие определения с текущими
         // Не забываем про уникальность definitions (они не должны повторяться)
-        alreadyFoundVarsToDefs.set(varName, [...new Set([...alreadyFoundDefinitionsToVar, ...varDefs])]);
+        alreadyFoundVarsToDefs.set(varName, [
+          ...new Set([...alreadyFoundDefinitionsToVar, ...varDefs]),
+        ]);
       }
 
       return alreadyFoundVarsToDefs;
     }, new Map<VarName, ListOfDefinitions>());
-
 
     const reachesSteps = new Array<Map<number, MapOfVarsToDefinitions>>();
 
@@ -208,11 +207,8 @@ export class ReachingDefinitions extends DataflowDetector {
 
     reachesSteps.push(initializationStep);
 
-
     while (true) {
-      const reachesStep = new Map(
-        reachesSteps.at(reachesSteps.length - 1),
-      );
+      const reachesStep = new Map(reachesSteps.at(reachesSteps.length - 1));
 
       cfg.nodes.forEach((block) => {
         const reachesNew = new Map<VarName, ListOfDefinitions>();
@@ -223,11 +219,13 @@ export class ReachingDefinitions extends DataflowDetector {
 
           // Добавляем новую переменную и её defs
           if (gen) {
-            const [genVarName, genVarDefs] = gen
+            const [genVarName, genVarDefs] = gen;
 
-            const reachesNewDefinitions = reachesNew.get(genVarName)
+            const reachesNewDefinitions = reachesNew.get(genVarName);
             if (reachesNewDefinitions) {
-              reachesNew.set(genVarName, [...new Set([...genVarDefs, ...reachesNewDefinitions])]);
+              reachesNew.set(genVarName, [
+                ...new Set([...genVarDefs, ...reachesNewDefinitions]),
+              ]);
             } else {
               reachesNew.set(genVarName, genVarDefs);
             }
@@ -249,12 +247,12 @@ export class ReachingDefinitions extends DataflowDetector {
               continue;
             } else {
               // Проверяем, вдруг уже добавили (с помощью GEN сета, или других predecessor)
-              const alreadyExist = reachesNew.get(varName)
+              const alreadyExist = reachesNew.get(varName);
 
               if (alreadyExist) {
                 reachesNew.set(varName, [
-                  ...new Set([...alreadyExist, ...varDefs])
-                ])
+                  ...new Set([...alreadyExist, ...varDefs]),
+                ]);
               } else {
                 reachesNew.set(varName, varDefs);
               }
@@ -264,7 +262,7 @@ export class ReachingDefinitions extends DataflowDetector {
 
         // Добавляем новые, досчитанные значения для block
         // Эти значения были подсчитаны на predecessors у block
-        reachesStep.set(block.stmtID, reachesNew)
+        reachesStep.set(block.stmtID, reachesNew);
       });
 
       reachesSteps.push(reachesStep);
@@ -272,7 +270,6 @@ export class ReachingDefinitions extends DataflowDetector {
       // Fix point: Map'ы равны за 2е последних итерации
       const lastIteration = reachesSteps.at(reachesSteps.length - 1)!;
       const preLastIteration = reachesSteps.at(reachesSteps.length - 2)!;
-
 
       let areEqual = true;
 
@@ -282,7 +279,7 @@ export class ReachingDefinitions extends DataflowDetector {
       }
 
       for (const [num1, mapOfValues1] of lastIteration) {
-        const mapOfValues2 = preLastIteration.get(num1)
+        const mapOfValues2 = preLastIteration.get(num1);
 
         if (!mapOfValues2) {
           areEqual = false;
@@ -295,7 +292,7 @@ export class ReachingDefinitions extends DataflowDetector {
         }
 
         for (const [key, arr1] of mapOfValues1) {
-          const arr2 = mapOfValues2.get(key)
+          const arr2 = mapOfValues2.get(key);
 
           if (!arr2 || arr1.length !== arr2.length) {
             areEqual = false;
@@ -312,21 +309,26 @@ export class ReachingDefinitions extends DataflowDetector {
       }
 
       if (areEqual) {
-        console.log(lastIteration)
-        const listOfNotes = []
+        console.log(lastIteration);
+        const listOfNotes = [];
         for (const [astInd, mapOfVarsWithDefinitions] of lastIteration) {
-          let line = ""
+          let line = "";
           const statement = ast.getStatement(astInd);
 
-          if (!statement) throw new Error(`Internal Error. Statement with id ${astInd} is not found in AST`);
+          if (!statement)
+            throw new Error(
+              `Internal Error. Statement with id ${astInd} is not found in AST`,
+            );
 
-          line += String(JSON.stringify(statement)) + "\n"
-          line += JSON.stringify(Object.fromEntries(mapOfVarsWithDefinitions.entries()));
+          line += String(JSON.stringify(statement)) + "\n";
+          line += JSON.stringify(
+            Object.fromEntries(mapOfVarsWithDefinitions.entries()),
+          );
 
-          listOfNotes.push(line + "\n\n")
+          listOfNotes.push(line + "\n\n");
         }
 
-        return listOfNotes
+        return listOfNotes;
       }
     }
   }
