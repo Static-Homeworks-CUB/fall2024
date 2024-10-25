@@ -9,7 +9,7 @@ describe("ReachingDefinitions tests", () => {
     // Create a driver instance that runs only the given custom detector
     const detectorPath =
       "assignments/2-gen-kill-analyses/Use-Definition-Chains/useDefinitionChains.ts";
-    const className = "ReachingDefinitions";
+    const className = "useDefinitionChains";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
     });
