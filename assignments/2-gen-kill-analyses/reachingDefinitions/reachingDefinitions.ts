@@ -256,19 +256,15 @@ export class ReachingDefinitions extends DataflowDetector {
       const preLastIteration = reachesSteps.at(reachesSteps.length - 2)!;
 
       console.log("---")
-      console.log(lastIteration);
-      console.log(preLastIteration);
+      console.log(JSON.stringify(Object.fromEntries(lastIteration)));
+      console.log("***")
+      console.log(JSON.stringify(Object.fromEntries(preLastIteration)));
 
       if (JSON.stringify(Object.fromEntries(lastIteration)) === JSON.stringify(preLastIteration)) {
         console.log(lastIteration)
         break
       }
     }
-
-    // console.log(allReachesForIterations.at(allReachesForIterations.length - 1));
-
-    // console.log(astIdToGENSet);
-    // console.log(astIdToKILLSet);
 
     return ["dw", "ewf"];
   }
