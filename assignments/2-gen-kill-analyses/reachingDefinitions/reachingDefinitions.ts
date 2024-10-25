@@ -296,10 +296,20 @@ export class ReachingDefinitions extends DataflowDetector {
 
       if (areEqual) {
         console.log(lastIteration)
-        break
+        const listOfNotes = []
+        for (const [astInd, mapOfVarsWithDefinitions] of lastIteration) {
+          let line = ""
+          const statement = ast.getStatement(astInd);
+
+          if (!statement) throw new Error(`Internal Error. Statement with id ${astInd} is not found in AST`);
+
+          line += JSON.stringify(statement)
+
+          listOfNotes.push(line)
+        }
+
+        return listOfNotes
       }
     }
-
-    return ["Done"];
   }
 }
