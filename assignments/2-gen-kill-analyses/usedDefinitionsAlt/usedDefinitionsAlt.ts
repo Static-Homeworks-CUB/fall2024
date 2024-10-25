@@ -72,7 +72,13 @@ interface AnalysisCTX {
   varDefs: Map<string, Set<DefID>>;
 }
 
-export class UpwardExposedDefinitions extends DataflowDetector {
+/**
+ * Dataflow detector that performs a forward dataflow analysis to detect
+ * definitions that could reach a variable use.
+ *
+ * @note It is `Alt` bc there should be another similar detector.
+ */
+export class UsedDefinitionsAlt extends DataflowDetector {
   check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     let output = "";
     cu.forEachCFG(cu.ast, (cfg) => {
@@ -87,6 +93,10 @@ export class UpwardExposedDefinitions extends DataflowDetector {
         const bb = cfg.getBasicBlock(bbIdx)!;
         const stmt = cu.ast.getStatement(bb.stmtID)!;
 
+        /**
+         * Filter definitions to find those of variables
+         * actually used in the statement.
+         */
         const usedVars = this.collectUsedVariables(stmt);
         const maybeUsedDefs = [...usedVars]
           .map((v) => result.varDefs.get(v) ?? new Set<DefID>())
@@ -193,7 +203,10 @@ export class UpwardExposedDefinitions extends DataflowDetector {
     const infos = new Map<BasicBlockIdx, Info>();
     cfg.forEachBasicBlock(ast, (stmt, bb) => {
       const defined = this.collectDefinedVariables(stmt);
+      // gen = {stmtID} if the block defines any variable
       const gen = new Set<DefID>(defined.size ? [bb.stmtID] : []);
+      // Could the be optimized to not store all definitions in the kill set?
+      // kill = (U_{v in defined} defs(v)) \ {stmtID}
       const kill = [...defined]
         .flatMap((def) => varDefs.get(def) ?? [])
         .reduce(union, new Set());
