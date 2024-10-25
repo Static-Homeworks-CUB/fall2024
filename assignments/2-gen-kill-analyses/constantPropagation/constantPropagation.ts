@@ -41,6 +41,9 @@ export class ConstantPropagation extends DataflowDetector {
     let output = "";
     cu.forEachCFG(cu.ast, (cfg) => {
       if (cfg.origin === "user") {
+        const title = `======= ${cfg.name} =======`;
+        const separator = "=".repeat(title.length);
+        output += [separator, title, separator, "\n"].join("\n");
         const result = this.performConstantPropagationAnalysis(cfg, cu.ast);
         Array.from(result.keys()).forEach((bbIdx) => {
           const bb = cfg.getBasicBlock(bbIdx)!;

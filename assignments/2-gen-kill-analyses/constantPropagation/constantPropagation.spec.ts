@@ -23,7 +23,11 @@ describe("ConstantPropagation tests", () => {
 
     const resultsPath = path.resolve(__dirname, "result.txt");
     const resultsContent = await fs.readFile(resultsPath, "utf-8");
-    const expectedOutput = `// in = {}
+    const expectedOutput = `==========================
+======= ifElseTest =======
+==========================
+
+// in = {}
 // out  = {a}
 let a: Int = 0;
 
@@ -33,7 +37,7 @@ let x: Int = a + 5;
 
 // in = {a, x}
 // out  = {a, x}
-if (true)
+if (a > 5)
 
 // in = {a, x}
 // out  = {a}
@@ -45,19 +49,67 @@ x = x + 3;
 
 // in = {}
 // out  = {}
-while (a < 10)
+return a;
+
+=========================
+======= whileTest =======
+=========================
+
+// in = {}
+// out  = {a}
+let a: Int = 0;
+
+// in = {a}
+// out  = {a, x}
+let x: Int = a;
 
 // in = {}
 // out  = {}
-let b: Int = a + 1;
+while (a < 5)
 
 // in = {}
-// out  = {}
-a = b;
+// out  = {x}
+x += 1;
 
 // in = {}
 // out  = {}
 return a;
+
+=========================
+======= fieldTest =======
+=========================
+
+// in = {}
+// out  = {field}
+self.field = -5;
+
+// in = {field}
+// out  = {}
+self.field = abs(self.field);
+
+===========================
+======= foreachTest =======
+===========================
+
+// in = {}
+// out  = {}
+let cells: map<Int, Int> = emptyMap();
+
+// in = {}
+// out  = {sum}
+let sum: Int = 0;
+
+// in = {}
+// out  = {}
+foreach (key, value in cells)
+
+// in = {}
+// out  = {}
+sum += value;
+
+// in = {}
+// out  = {}
+return sum;
 
 `;
     expect(resultsContent.trim()).toBe(expectedOutput.trim());
