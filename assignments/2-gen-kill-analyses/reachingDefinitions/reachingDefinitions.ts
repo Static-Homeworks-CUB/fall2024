@@ -9,6 +9,8 @@ import {
   AstExpression,
   AstStatement,
 } from "@tact-lang/compiler/dist/grammar/ast";
+import path from "path";
+import fs from "fs";
 
 type Definition = string;
 
@@ -19,6 +21,15 @@ type ListOfDefinitions = Array<Definition>;
 type VarNameWithDefinitions = [VarName, ListOfDefinitions];
 
 type MapOfVarsToDefinitions = Map<VarName, ListOfDefinitions>;
+
+
+declare global {
+  interface BigInt {
+    toJSON(): number;
+  }
+}
+
+BigInt.prototype.toJSON = function () { return Number(this) }
 
 
 // export DIR=assignments/2-gen-kill-analyses/reachingDefinitions
@@ -36,8 +47,14 @@ export class ReachingDefinitions extends DataflowDetector {
       }
     });
 
-    console.log(listOfReports.join("\n"));
-    return Promise.resolve([]);
+    const outputDir = path.join(__dirname);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputPath = path.join(outputDir, "result.txt");
+    fs.writeFileSync(outputPath, listOfReports.join("\n"));
+
+    return [];
   }
 
   private getListOfDefinitions(
@@ -303,9 +320,10 @@ export class ReachingDefinitions extends DataflowDetector {
 
           if (!statement) throw new Error(`Internal Error. Statement with id ${astInd} is not found in AST`);
 
-          line += JSON.stringify(statement)
+          line += String(JSON.stringify(statement)) + "\n"
+          line += JSON.stringify(Object.fromEntries(mapOfVarsWithDefinitions.entries()));
 
-          listOfNotes.push(line)
+          listOfNotes.push(line + "\n\n")
         }
 
         return listOfNotes

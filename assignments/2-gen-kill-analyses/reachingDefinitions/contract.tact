@@ -9,19 +9,17 @@ fun test(): Int {
         let z: Int = -7;
     }
 
-    // All reaching: {x: [2], y: [5, "difference"], z: [7, "y"], difference: ["z"]}
-    // Reached: {y: [5, "difference"]}
+    // All reaching: {x: [2], y: [5], z: [7, -7], difference: ["y"]}
     while (y > 0) {
-        // All reaching: {x: [2], y: [5, "difference"], z: [7, "y"], difference: ["z"]}
-        // Reached: {}
+        // All reaching: {x: [2], y: [5], z: [7, -7], difference: ["y"]}
         let difference: Int = y;
 
-        // All reaching: {x: [2], y: [5, "difference"], z: [7, "y"], difference: ["z"]}
-        // Reached: {y: [5, "y - z"], z: [7, "z + y"]}
+        // All reaching: {x: [2], y: [5], z: [7, -7], difference: ["y"]}
         x = y;
 
-        // All reaching: {x: [2], y: [5, "difference"], z: ["y"], difference: ["z"]}
-        // Reached: {y: [5, "y - z"], z: ["z + y"]}
+        // Based on the issue description, only Let statements create definition, so x: ["y"] should not appear
+
+        // All reaching: {y: [5], z: [7, -7], difference: ["y"]}
         y = 9;
     }
 
