@@ -170,39 +170,17 @@ export class ReachingDefinitions extends DataflowDetector {
       astIdToKILLSet.set(block.stmtID, killResult);
     });
 
-    // Все определения для инициализации итеративного алгоритма
+    // Пустое множество для инициализации итеративного алгоритма
     // Должны получить структуру: Var -> Defs
-    // Склеиваем все элементы по VarName
-    const allDefinitions: MapOfVarsToDefinitions = Array.from(
-      astIdToGENSet.values(),
-    ).reduce((acc, defs) => {
-      if (!defs) return acc;
-
-      const [varName, varDefs] = defs;
-
-      const alreadyFoundVarsToDefs = new Map(acc);
-
-      const alreadyFoundDefinitionsToVar = alreadyFoundVarsToDefs.get(varName);
-      if (!alreadyFoundDefinitionsToVar) {
-        // Нет такой переменной ещё
-        alreadyFoundVarsToDefs.set(varName, varDefs);
-      } else {
-        // Уже есть, конкатенируем уже существующие определения с текущими
-        // Не забываем про уникальность definitions (они не должны повторяться)
-        alreadyFoundVarsToDefs.set(varName, [
-          ...new Set([...alreadyFoundDefinitionsToVar, ...varDefs]),
-        ]);
-      }
-
-      return alreadyFoundVarsToDefs;
-    }, new Map<VarName, ListOfDefinitions>());
+    // Потом во время дополнительных решений, мы склеиваем все элементы по VarName
+    const initSolution: MapOfVarsToDefinitions = new Map<VarName, ListOfDefinitions>();
 
     const reachesSteps = new Array<Map<number, MapOfVarsToDefinitions>>();
 
     const initializationStep: Map<number, MapOfVarsToDefinitions> = new Map();
 
     cfg.nodes.forEach((block) => {
-      initializationStep.set(block.stmtID, allDefinitions);
+      initializationStep.set(block.stmtID, initSolution);
     });
 
     reachesSteps.push(initializationStep);
