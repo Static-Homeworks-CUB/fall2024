@@ -173,7 +173,10 @@ export class ReachingDefinitions extends DataflowDetector {
     // Пустое множество для инициализации итеративного алгоритма
     // Должны получить структуру: Var -> Defs
     // Потом во время дополнительных решений, мы склеиваем все элементы по VarName
-    const initSolution: MapOfVarsToDefinitions = new Map<VarName, ListOfDefinitions>();
+    const initSolution: MapOfVarsToDefinitions = new Map<
+      VarName,
+      ListOfDefinitions
+    >();
 
     const reachesSteps = new Array<Map<number, MapOfVarsToDefinitions>>();
 
