@@ -35,21 +35,8 @@ function setMinus(fromSet: Set<string>, subtrahend: Set<string>): Set<string> {
   return new Set([...fromSet].filter((v) => !subtrahend.has(v)));
 }
 
-/**
- * An example detector that implements live variables analysis.
- *
- * Live variables analysis is a backward analysis that tracks which variables are
- * live (used) at various points in the program. It is used to detect unused
- * variables, dead code, etc. or provide compiler optimizations.
- *
- * Use the following command to run it:
- *  export DIR=assignments/2-gen-kill-analyses/liveVariables
- *  yarn misti --detectors $DIR/liveVariables.ts:LiveVariables $DIR/live-variables.tact
- */
 export class CopyPropagation extends DataflowDetector {
-  /**
-   * Doesn't generate any warnings. Only performs live variables analysis and prints the result.
-   */
+  
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     let output = "";
     cu.forEachCFG(cu.ast, (cfg) => {
@@ -152,8 +139,6 @@ export class CopyPropagation extends DataflowDetector {
         const inMinusKill = setMinus(inB, info.kill);
         inMinusKill.forEach((v) => outB.add(v));
 
-        // Update in[B] and out[B] if they have been changed
-        // Fixed point: We terminate the loop when no changes are detected
         if (!setsAreEqual(inB, info.in)) {
           info.in = inB;
           stable = false;
@@ -168,11 +153,6 @@ export class CopyPropagation extends DataflowDetector {
     return copyPropagationInfoMap;
   }
 
-  /**
-   * Collects the variables defined in the given statement. Duplicated definitions will be repeated.
-   * @param stmt The statement to collect defined variables from.
-   * @returns An array of variable names defined in the statement.
-   */
   private collectNewDefinedVariables(stmt: AstStatement): Set<string> {
     const defined = new Set<string>();
     switch (stmt.kind) {
@@ -189,11 +169,6 @@ export class CopyPropagation extends DataflowDetector {
     return defined;
   }
 
-  /**
-   * Collects the variables defined in the given statement. Duplicated definitions will be repeated.
-   * @param stmt The statement to collect defined variables from.
-   * @returns An array of variable names defined in the statement.
-   */
   private collectDefinedVariables(stmt: AstStatement): Array<string> {
     const defined = new Array<string>();
     switch (stmt.kind) {
@@ -214,9 +189,6 @@ export class CopyPropagation extends DataflowDetector {
     return defined;
   }
 
-  /**
-   * Collects variables defined in an expression (e.g., LHS of an assignment).
-   */
   private collectDefinedVariablesFromExpression(
     expr: AstExpression,
     defined: Array<string>,
