@@ -249,6 +249,7 @@ export class ConstantPropagation extends DataflowDetector {
       case "null":
       case "init_of":
       case "conditional":
+        break;
     }
   }
 
