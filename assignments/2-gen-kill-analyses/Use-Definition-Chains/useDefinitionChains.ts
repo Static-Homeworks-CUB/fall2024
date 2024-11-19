@@ -18,7 +18,7 @@ import { prettyPrint } from "@tact-lang/compiler/dist/prettyPrinter";
 
 type DefinitionSet = Set<number>;
 
-interface ReachingDefinitionsInfo {
+interface UseDefinitionInfo {
   gen: DefinitionSet;
   kill: DefinitionSet;
   in: DefinitionSet;
