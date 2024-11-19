@@ -2,7 +2,7 @@ import { Driver } from "@nowarp/misti/src/cli";
 import path from "path";
 import fs from "fs/promises";
 
-describe("ReachingDefinitions tests", () => {
+describe("UseDefinition tests", () => {
   it("should produce correct output for the sample contract", async () => {
     const contractPath = path.resolve(__dirname, "contract.tact");
 
