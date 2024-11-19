@@ -25,7 +25,7 @@ interface UseDefinitionInfo {
   out: DefinitionSet;
 }
 
-export class useDefinitionChains extends DataflowDetector {
+export class UseDefinitionChains extends DataflowDetector {
   async check(cu: CompilationUnit): Promise<MistiTactWarning[]> {
     let output = "";
 
