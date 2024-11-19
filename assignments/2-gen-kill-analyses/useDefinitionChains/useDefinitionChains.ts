@@ -16,8 +16,14 @@ import {
 } from "@tact-lang/compiler/dist/grammar/ast";
 import { prettyPrint } from "@tact-lang/compiler/dist/prettyPrinter";
 
+/**
+ * Represents a set of definitions in the program.
+ */
 type DefinitionSet = Set<number>;
 
+/**
+ * Contains the reaching definitions information for a basic block in the control flow graph.
+ */
 interface UseDefinitionInfo {
   gen: DefinitionSet;
   kill: DefinitionSet;
@@ -81,11 +87,12 @@ export class UseDefinitionChains extends DataflowDetector {
   private performReachingDefinitionsAnalysis(
     cfg: CFG,
     astStore: TactASTStore,
-  ): Map<BasicBlockIdx, ReachingDefinitionsInfo> {
+  ): Map<BasicBlockIdx, UseDefinitionInfo> {
     this.collectAllDefinitions(cfg, astStore);
 
-    const rdInfoMap = new Map<BasicBlockIdx, ReachingDefinitionsInfo>();
+    const rdInfoMap = new Map<BasicBlockIdx, UseDefinitionInfo>();
 
+    // Initialize rdInfoMap and collect uses
     cfg.nodes.forEach((bb) => {
       const bbIdx = bb.idx;
       const stmt = astStore.getStatement(bb.stmtID);
@@ -111,39 +118,40 @@ export class UseDefinitionChains extends DataflowDetector {
       }
     });
 
-    const worklist = Array.from(rdInfoMap.keys());
-    while (worklist.length > 0) {
-      const bbIdx = worklist.shift()!;
-      const info = rdInfoMap.get(bbIdx)!;
+    // Simple iterative loop over CFG nodes
+    let changed = true;
+    while (changed) {
+      changed = false;
+      cfg.nodes.forEach((bb) => {
+        const bbIdx = bb.idx;
+        const info = rdInfoMap.get(bbIdx)!;
 
-      const inB = new Set<number>();
-      const preds = cfg.getPredecessors(bbIdx) || [];
-      preds.forEach((pred) => {
-        const predInfo = rdInfoMap.get(pred.idx)!;
-        predInfo.out.forEach((defId) => inB.add(defId));
-      });
+        // Compute in[B]
+        const inB = new Set<number>();
+        const preds = cfg.getPredecessors(bbIdx) || [];
+        preds.forEach((pred) => {
+          const predInfo = rdInfoMap.get(pred.idx)!;
+          predInfo.out.forEach((defId) => inB.add(defId));
+        });
 
-      const outB = new Set<number>(info.gen);
-      inB.forEach((defId) => {
-        if (!info.kill.has(defId)) {
-          outB.add(defId);
-        }
-      });
-
-      const inChanged = !this.setsAreEqual(inB, info.in);
-      const outChanged = !this.setsAreEqual(outB, info.out);
-
-      if (inChanged || outChanged) {
-        info.in = inB;
-        info.out = outB;
-
-        const succs = cfg.getSuccessors(bbIdx) || [];
-        succs.forEach((succ) => {
-          if (!worklist.includes(succ.idx)) {
-            worklist.push(succ.idx);
+        // Compute out[B]
+        const outB = new Set<number>(info.gen);
+        inB.forEach((defId) => {
+          if (!info.kill.has(defId)) {
+            outB.add(defId);
           }
         });
-      }
+
+        // Check for changes
+        const inChanged = !this.setsAreEqual(inB, info.in);
+        const outChanged = !this.setsAreEqual(outB, info.out);
+
+        if (inChanged || outChanged) {
+          info.in = inB;
+          info.out = outB;
+          changed = true;
+        }
+      });
     }
 
     return rdInfoMap;

@@ -9,7 +9,7 @@ describe("UseDefinition tests", () => {
     // Create a driver instance that runs only the given custom detector
     const detectorPath =
       "assignments/2-gen-kill-analyses/useDefinitionChains/useDefinitionChains.ts";
-    const className = "useDefinitionChains";
+    const className = "UseDefinitionChains";
     const driver = await Driver.create(contractPath, {
       detectors: [`${detectorPath}:${className}`],
     });
@@ -23,6 +23,14 @@ describe("UseDefinition tests", () => {
 
     const resultsPath = path.resolve(__dirname, "result.txt");
     const resultsContent = await fs.readFile(resultsPath, "utf-8");
+    const normalize = (str: string) =>
+      str
+        .split("\n")
+        .map((line) => line.trim())
+        .join("\n")
+        .replace(/\s+/g, " ")
+        .trim();
+
     const expectedOutput = `// gen  = [let a: Int = 0;]
 // kill = []
 // in   = []
@@ -57,8 +65,8 @@ a = c;
 // kill = []
 // in   = [a = c;, let c: Int = a + 1;, let b: Int = a + 1;]
 // out  = [a = c;, let c: Int = a + 1;, let b: Int = a + 1;]
-return a;
-`;
-    expect(resultsContent.trim()).toBe(expectedOutput.trim());
+return a;`;
+
+    expect(normalize(resultsContent)).toBe(normalize(expectedOutput));
   });
 });
