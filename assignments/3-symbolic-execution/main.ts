@@ -16,21 +16,21 @@ import { parseTact } from "./parser";
   const x = new SymVarArith("x");
   state.setVar("x", x);
 
-  //   const ast = parseTact(`fun test(x: Int): Int {
-  //   if (x >= 0) {
-  //     return x;
+  const ast = parseTact(`fun test(x: Int): Int {
+    if (x >= 0) {
+      return x;
+    } else {
+      return -x;
+    }
+  }`);
+  //   const ast = parseTact(`fun test2(x: Int): Int {
+  //   if ((x % 2 == 0)) {
+  //     return x / 2;
   //   } else {
-  //     return -x;
+  //     return x * 3 + 1;
   //   }
   // }`);
-  const ast = parseTact(`fun test2(x: Int): Int {
-  if ((x % 2 == 0)) {
-    return x / 2;
-  } else {
-    return x * 3 + 1;
-  }
-}`);
-  if (!ast) throw new Error(`Cannot parse Tact`)
+  if (!ast) throw new Error(`Cannot parse Tact`);
 
   // Execute each function symbolically
   for (const f of ast.functions) {
