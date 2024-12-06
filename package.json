@@ -22,7 +22,8 @@
     "@tact-lang/compiler": "^1.5.0",
     "@types/json-bigint": "^1.0.4",
     "json-bigint": "^1.0.0",
-    "yarn": "^1.22.22"
+    "yarn": "^1.22.22",
+    "z3-solver": "^4.13.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",
