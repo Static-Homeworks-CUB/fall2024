@@ -23,40 +23,40 @@ describe("DownwardExposedUses tests", () => {
 
     const resultsPath = path.resolve(__dirname, "result.txt");
     const resultsContent = await fs.readFile(resultsPath, "utf-8");
-    const expectedOutput = `// lastdef = [a,1655]
-// defkill = []
+    const expectedOutput = `// use = [a,2,5]
+// def = []
 // in = []
-// out = [a,1655]
+// out = [a,2,5]
 let a: Int = 0;
 
-// lastdef = []
-// defkill = []
-// in = [a,1655,a,1667,b,1664]
-// out = [a,1655,a,1667,b,1664]
+// use = []
+// def = []
+// in = [a,2,5,a,5,9,b,4,9]
+// out = [a,2,5,a,5,9,b,4,9]
 while (a < 10)
 
-// lastdef = [b,1664]
-// defkill = []
-// in = [a,1655,a,1667,b,1664]
-// out = [b,1664,a,1655,a,1667]
+// use = [b,4,9]
+// def = []
+// in = [a,2,5,a,5,9,b,4,9]
+// out = [b,4,9,a,2,5,a,5,9]
 let b: Int = a + 1;
 
-// lastdef = [a,1667]
-// defkill = [a]
-// in = [b,1664,a,1655,a,1667]
-// out = [a,1667,b,1664]
+// use = [a,5,9]
+// def = [a]
+// in = [b,4,9,a,2,5,a,5,9]
+// out = [a,5,9,b,4,9]
 a = b;
 
-// lastdef = [a,1673]
-// defkill = [a]
-// in = [a,1655,a,1667,b,1664]
-// out = [a,1673,b,1664]
+// use = [a,7,5]
+// def = [a]
+// in = [a,2,5,a,5,9,b,4,9]
+// out = [a,7,5,b,4,9]
 a = 14 + 15;
 
-// lastdef = []
-// defkill = []
-// in = [a,1673,b,1664]
-// out = [a,1673,b,1664]
+// use = []
+// def = []
+// in = [a,7,5,b,4,9]
+// out = [a,7,5,b,4,9]
 return a;
 
  `;

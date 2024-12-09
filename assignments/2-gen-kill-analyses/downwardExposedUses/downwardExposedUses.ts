@@ -3,29 +3,22 @@ import * as path from "path";
 import { DataflowDetector } from "@nowarp/misti/dist/src/detectors/detector";
 import { CompilationUnit } from "@nowarp/misti/dist/src/internals/ir";
 import { MistiTactWarning } from "@nowarp/misti/dist/src/internals/warnings";
-//import { foldExpressions } from "@nowarp/misti/dist/src/internals/tactASTUtil";
 import {
   CFG,
   BasicBlockIdx,
-  //BasicBlock,
   TactASTStore,
 } from "@nowarp/misti/dist/src/internals/ir";
-import {
-  //  AstExpression,
-  AstStatement,
-  idText,
-} from "@tact-lang/compiler/dist/grammar/ast";
+import { AstStatement, idText } from "@tact-lang/compiler/dist/grammar/ast";
 import { prettyPrint } from "@tact-lang/compiler/dist/prettyPrinter";
-//import { assert } from "console";
 
-type VariableRecord = [string, BasicBlockIdx];
+type VariableRecord = [string, number, number];
 type VariableSet = Set<VariableRecord>;
 
-interface LiveVariableInfo {
+interface DownwardExposedUsesData {
   /** Used in the block before any redefinition. */
-  lastdef: VariableSet;
+  use: VariableSet;
   /** Defined in the block. */
-  defkill: Set<string>;
+  def: Set<string>;
   /** Live at the entry of the block. */
   in: VariableSet;
   /** Live at the exit of the block. */
@@ -49,8 +42,8 @@ export class DownwardExposedUses extends DataflowDetector {
           const stmt = cu.ast.getStatement(bb.stmtID)!;
           const lva = result.get(bbIdx)!;
           output += [
-            `// lastdef = [${Array.from(lva.lastdef)}]`,
-            `// defkill = [${Array.from(lva.defkill)}]`,
+            `// use = [${Array.from(lva.use)}]`,
+            `// def = [${Array.from(lva.def)}]`,
             `// in = [${Array.from(lva.in)}]`,
             `// out = [${Array.from(lva.out)}]`,
             `${prettyPrint(stmt).split("\n")[0].split("{")[0].trim()}`,
@@ -80,17 +73,20 @@ export class DownwardExposedUses extends DataflowDetector {
   private performDownwardExposedUsesAnalysis(
     cfg: CFG,
     astStore: TactASTStore,
-  ): Map<BasicBlockIdx, LiveVariableInfo> {
-    const liveVariableInfoMap = new Map<BasicBlockIdx, LiveVariableInfo>();
+  ): Map<BasicBlockIdx, DownwardExposedUsesData> {
+    const downwardExposedInfoMap = new Map<
+      BasicBlockIdx,
+      DownwardExposedUsesData
+    >();
 
-    // Step 1: Get lastdef and defkill sets for each basic block
+    // Step 1: Get use and def sets for each basic block
     cfg.nodes.forEach((bb) => {
       const stmt = astStore.getStatement(bb.stmtID)!;
-      liveVariableInfoMap.set(bb.idx, {
-        lastdef: this.collectLastDefVariables(stmt),
-        defkill: this.collectKilledVariables(stmt),
-        in: new Set<[string, BasicBlockIdx]>(),
-        out: new Set<[string, BasicBlockIdx]>(),
+      downwardExposedInfoMap.set(bb.idx, {
+        use: this.collectUseVariables(stmt),
+        def: this.collectDefVariables(stmt),
+        in: new Set<VariableRecord>(),
+        out: new Set<VariableRecord>(),
       });
     });
 
@@ -100,24 +96,24 @@ export class DownwardExposedUses extends DataflowDetector {
       stable = true;
 
       // Forward analsysis => process in straight order
-      const nodesInReverse = cfg.nodes.slice();
-      nodesInReverse.forEach((bb) => {
-        const info = liveVariableInfoMap.get(bb.idx)!;
+      const nodes = cfg.nodes.slice();
+      nodes.forEach((bb) => {
+        const info = downwardExposedInfoMap.get(bb.idx)!;
 
         // in[B] = Union of out[P] for all predecessors P of B
         const inB = new Set<VariableRecord>();
         const predecessors = cfg.getPredecessors(bb.idx);
         if (predecessors) {
           predecessors.forEach((pred) => {
-            const predInfo = liveVariableInfoMap.get(pred.idx)!;
+            const predInfo = downwardExposedInfoMap.get(pred.idx)!;
             predInfo.out.forEach((v) => inB.add(v));
           });
         }
 
         // out[B] = lastDef[B] ∪ (in[B] - defKill[B])
-        const outB = new Set<VariableRecord>(info.lastdef);
+        const outB = new Set<VariableRecord>(info.use);
         const inMinusKill = new Set<VariableRecord>( // out[B] - kill[B]
-          [...inB].filter((v) => !info.defkill.has(v[0])),
+          [...inB].filter((v) => !info.def.has(v[0])),
         );
         inMinusKill.forEach((v) => outB.add(v));
 
@@ -134,7 +130,7 @@ export class DownwardExposedUses extends DataflowDetector {
       });
     }
 
-    return liveVariableInfoMap;
+    return downwardExposedInfoMap;
   }
 
   /**
@@ -142,7 +138,7 @@ export class DownwardExposedUses extends DataflowDetector {
    * @param stmt The statement to collect used variables from.
    * @returns A set of variable names used in the statement.
    */
-  private collectKilledVariables(stmt: AstStatement): Set<string> {
+  private collectDefVariables(stmt: AstStatement): Set<string> {
     const killed = new Set<string>();
 
     switch (stmt.kind) {
@@ -162,22 +158,36 @@ export class DownwardExposedUses extends DataflowDetector {
    * @param stmt The statement to collect defined variables from.
    * @returns A set of variable names defined in the statement.
    */
-  private collectLastDefVariables(stmt: AstStatement): VariableSet {
+  private collectUseVariables(stmt: AstStatement): VariableSet {
     const defined = new Set<VariableRecord>();
+    const locationInfo = stmt.loc.interval.getLineAndColumn();
     switch (stmt.kind) {
       case "statement_let":
-        defined.add([idText(stmt.name), stmt.id]);
+        defined.add([
+          idText(stmt.name),
+          locationInfo.lineNum,
+          locationInfo.colNum,
+        ]);
         break;
       case "statement_assign":
       case "statement_augmentedassign":
         defined.add([
           this.tryExtractAssignedVarNameFromAssingment(stmt),
-          stmt.id,
+          locationInfo.lineNum,
+          locationInfo.colNum,
         ]);
         break;
       case "statement_foreach":
-        defined.add([idText(stmt.keyName), stmt.id]);
-        defined.add([idText(stmt.valueName), stmt.id]);
+        defined.add([
+          idText(stmt.keyName),
+          locationInfo.lineNum,
+          locationInfo.colNum,
+        ]);
+        defined.add([
+          idText(stmt.valueName),
+          locationInfo.lineNum,
+          locationInfo.colNum,
+        ]);
         break;
       default:
         break;
